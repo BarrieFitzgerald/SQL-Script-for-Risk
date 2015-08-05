@@ -1,0 +1,122 @@
+
+  CREATE MATERIALIZED VIEW "DMUSER"."RETENTION_DATA_MV" ("LINK", "STUDENT_ID", "FTFT_TERM", "TERM", "SEMESTER_NO", "NEXT_TERM", "NEXT_FALL", "DEGREE_EARNED_IND", "RETAIN_GRAD", "HOPE", "PELL", "LOANS", "OTHER_FIN", "FIRST_GEN", "GENDER", "RACE_ETH", "CITIZEN", "EDR_CODE", "HSDEGREE", "HSYR_GROUP", "HOUSING", "AGE_GROUP", "TRANSFERHRS", "HS_GPA", "TEST_SCORE", "EARNED_HRS_RATE", "FLC", "ACAY_STANDING", "MAJOR_GROUP", "MAJOR_DEGREE", "VSU_GPA", "TERM_GPA", "FULL_GPA", "ONLINE_CAMPUS", "MAIN_CAMPUS", "OFF_CAMPUS")
+  ORGANIZATION HEAP PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 
+ NOCOMPRESS LOGGING
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1
+  BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "USERS" 
+  BUILD IMMEDIATE
+  USING INDEX 
+  REFRESH FORCE ON DEMAND
+  USING DEFAULT LOCAL ROLLBACK SEGMENT
+  USING ENFORCED CONSTRAINTS DISABLE QUERY REWRITE
+  AS with term_data as (
+select term, ftft_term, student_id, (substr(term,1,4) - substr(ftft_term,1,4))*2 + decode(substr(term, -1),8,1,0) semester_no, 
+case when term like '%08' then term+94 else term+6 end next_term,
+case when term like '%08' then term+100 else term+106 end next_fall,
+hs_gpa, degree_earned_ind, 
+to_number(decode (
+    greatest(
+      nvl(sat_verbal,0)+nvl(sat_math,0),
+      decode(nvl(ACT_COMPOSITE,0),0,0,10,500,11,550,12,610,13,660,14,710,15,760,16,810,17,850,18,890,19,930,20,970,21,1010,22,1040,23,1080,24,1120,25,1160,26,1200,27,1240,28,1280,29,1320,30,1350,31,1390,32,1430,33,1480,34,1530,35,1590,36,1600)
+      ),0,null,greatest(
+      nvl(sat_verbal,0)+nvl(sat_math,0),
+      decode(nvl(ACT_COMPOSITE,0),0,0,10,500,11,550,12,610,13,660,14,710,15,760,16,810,17,850,18,890,19,930,20,970,21,1010,22,1040,23,1080,24,1120,25,1160,26,1200,27,1240,28,1280,29,1320,30,1350,31,1390,32,1430,33,1480,34,1530,35,1590,36,1600)
+      )
+    )) test_score, 
+hope_received, pell_received, first_generation, gender, race, ethnicity, citizen, origin_county, 
+hs_degree_type, hs_degree_year, other_fed_loans, other_fed_grants, other_loans, other_grants_schlr_private, housing, birthdate, transfer_hours_earned,
+attempted_hrs, earned_hrs, flc_code, academic_standing, major_code, major, major_degree_code, vsu_gpa, institutional_term_gpa, full_cumulative_gpa,
+campus_ecore, campus_emajor, campus_goml, campus_kingsbay, campus_main, campus_military, campus_offsite, campus_online, campus_webmba
+from odi.student_term_details
+where 
+(term like '%08' or term like '%02')
+and ftft_term is not null
+and term >= '200508'
+--and (ftft_term =term or (term=201408 and student_id in (select * from dual))) --need to be replaced by query to provide cohort14
+),
+registered as (
+select student_id, term from odi.student_term_details
+where ftft_term >= 200508
+),
+degree_earned as (
+select student_id, term, degree_earned_ind from odi.student_term_details
+where ftft_term >= 200508 and degree_earned_ind='Y'
+),
+region as (
+select name county, EDR 
+from sra_sirs.county
+where name!='Out-of-State')
+
+select a.ftft_term||a.student_id link,
+  a.student_id,
+  a.ftft_term, a.term, semester_no,
+  nvl2(b.student_id,1,0) next_term, 
+  nvl2(c.student_id,1,0) next_fall, 
+  nvl((select distinct 1 from degree_earned e
+    where e.student_id=a.student_id and e.term<=a.next_fall),0) degree_earned_ind, 
+  case when nvl2(c.student_id,1,0) + nvl((select distinct 1 from degree_earned e where e.student_id=a.student_id and e.term<=a.next_fall),0)=0 then 0 else 1 end retain_grad,
+  decode(hope_received, 0, 0, 1) hope,
+  decode(pell_received, 0, 0, 1) pell,
+  decode(other_fed_loans + other_loans, 0, 0, 1) loans,
+  decode(other_fed_grants + other_grants_schlr_private, 0, 0, 1) other_fin,
+  decode(first_generation, 'Y', 1, 0) first_gen,
+  decode(gender, 'F', 1, 0) gender,
+  case when ethnicity != 'Hispanic' and race = 'White' then 3
+       when ethnicity != 'Hispanic' and race = 'Black or African American' then 2
+       else 1 end race_eth,
+  decode(citizen, 'Alien, Non-resident', 1, 'Alien, Resident', 2, 3) citizen,
+  nvl(d.EDR,0) EDR_code,
+  decode(hs_degree_type, 'College Preparatory', 1, 0) hsdegree,
+  case when substr(ftft_term,1,4)-hs_degree_year <=2 then 1
+     when substr(ftft_term,1,4)-hs_degree_year > 2 then 2 
+     else 3 end hsyr_group,
+  decode(housing, 'Y', 1, 0) housing,
+  case when substr(ftft_term,1,4)-to_char(birthdate,'YYYY') <=19 then 1
+     when substr(ftft_term,1,4)-to_char(birthdate,'YYYY') <=24 then 2 
+     when substr(ftft_term,1,4)-to_char(birthdate,'YYYY') <=39 then 3
+     when substr(ftft_term,1,4)-to_char(birthdate,'YYYY') >39 then 4 
+     else 5 end age_group,
+  decode(nvl(transfer_hours_earned, 0), 0, 0, 1) transferhrs,
+  nvl(a.hs_gpa, round(avg(a.hs_gpa) over(partition by a.ftft_term, a.term),2)) hs_gpa,
+  nvl(a.test_score, round(avg(a.test_score) over(partition by a.ftft_term, a.term),0)) test_score,
+  decode(nvl(a.attempted_hrs,0),0,1,a.earned_hrs/a.attempted_hrs) earned_hrs_rate,
+  case when lower(FLC_CODE) like '%lc%' then 1 else 0 end flc,
+  case when lower(academic_standing) like '%suspension%' then 0
+       when lower(academic_standing) like '%probation%' then 1
+       when lower(academic_standing) like '%good%' then 2
+       when lower(academic_standing) like '%dean%' then 3
+       else 0 
+  end acay_standing,
+  case when lower(major_code) = 'sss' then 0
+       when lower(major_code) = 'las' then 1
+       when lower(major_code) like '%ba%' then 2
+       when lower(major_code) in ('ast','mat','phy','egs','bio','maa','chm','egr','evs','evg','mco','cis','cs') then 4
+       when lower(major_code) in ('mas','pep','nur','sma','pat','pnur','vtd','vth','dhg','at','ep') then 5
+       when lower(major_code) in ('fin','eco','acc','mgt','hcad','mkt','ib') then 6
+       when lower(major_code) in ('mus','mup','danc','art','id','mue','are','tha','spc') then 7
+       when lower(major_code) in ('spd','be','comd','vtt','oat','mge','spe','comx','edix','edi','ece','sed','wed','tie','pe','ads','psy') then 8
+       when lower(major) like '%coe%' then 3
+       else 9
+  end major_group,
+  decode (major_degree_code,
+          'BGS', 8,
+          'BBA', 7,
+          'BM', 6,
+          'BFA', 5,
+          'BSN', 4,
+          'BA', 3,
+          '000000', 1,
+          CASE when major_degree_code like '%BS%' then 2 else 9 end) major_degree,
+  nvl(VSU_GPA, 0) vsu_gpa,
+  nvl(institutional_term_gpa, 0) term_gpa,
+  nvl(full_cumulative_gpa, 0) full_gpa,
+  campus_ecore + campus_emajor + campus_goml + campus_online + campus_webmba online_campus,
+  campus_main main_campus,
+  campus_kingsbay + campus_military + campus_offsite off_campus
+from ((term_data a left outer join registered b on (a.student_id=b.student_id and a.next_term=b.term))
+        left outer join registered c on (a.student_id=c.student_id and a.next_fall=c.term)) 
+          left outer join region d on (replace(upper(a.origin_county),' ')=replace(upper(d.county),' '));
+
+   COMMENT ON MATERIALIZED VIEW "DMUSER"."RETENTION_DATA_MV"  IS 'snapshot table for snapshot DMUSER.RETENTION_DATA_MV';
