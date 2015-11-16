@@ -1,0 +1,492 @@
+/*SQL QUERY FOR CLEANING UP TRANSFER STUDENTS DATA*/
+
+select      link, 
+            term, 
+            xfer_cohort, 
+            semester_no, 
+            gender, 
+            hispanic, 
+            white, 
+            black_aa, 
+            other_minority,
+            us_citizen, 
+            res_alien, 
+            nonres_alien, 
+            hs_wait_no, 
+            hs_wait_one_four, 
+            hs_wait_five_more, 
+            hs_wait_unknown, 
+            cp_hs_degree, 
+            tech_hs_degree, 
+            ged_hs_degree, 
+            unknown_hs_degree, 
+            hs_gpa, 
+            first_gen, 
+            any_aid, 
+            pell, 
+            hope, 
+            fed_loans, 
+            fed_grants, 
+            other_loans, 
+            other_aid, 
+            housing, 
+            athlete, 
+            suspended_py_acay_stand, 
+            probation_py_acay_stand, 
+            good_py_acay_stand, 
+            dean_py_acay_stand, 
+            pm_college, 
+            pm_major, 
+            learn_sup_major, 
+            undecided_major, 
+            bus_admin_major, 
+            stem_major, 
+            health_sci_major, 
+            art_major, 
+            ed_major, 
+            other_major, 
+            bgs_degree, 
+            bba_degree, 
+            bm_degree, 
+            bfa_degree, 
+            bsn_degree, 
+            ba_degree, 
+            undecided_degree,
+            bs_degree,
+            other_degree, 
+            ft_stu, 
+            freshman, 
+            sophomore, 
+            junior, 
+            senior, 
+            hrs_enrolled, 
+            py_hrs_earned_rate, 
+            py_term_gpa, 
+            py_vsu_gpa, 
+            py_full_gpa, 
+            distance_component, 
+            not_online, 
+            online_component, 
+            online_campus, 
+            main_campus, 
+            off_campus, 
+            xfer_gpa, 
+            py_rate_120hrs, 
+            traditional_student, 
+            enrolled_next_term, 
+            earned_degree, 
+            next_term_or_degree, 
+            edr, 
+            count(distinct numb_ws) as numb_ws, 
+            count(distinct numb_wfs) as numb_wfs,
+            count(distinct numb_wms) as numb_wms
+
+from        (     
+
+select        std.term || std.student_id as link,
+              std.term, 
+              std.transfer_term as xfer_cohort,
+              1+(floor((std.term - std.transfer_term)/100) * 3) + 
+              (case
+                  when substr(std.transfer_term, -1) = '8'
+                      and (std.term - std.transfer_term) - (floor((std.term - std.transfer_term)/100)*100) = '94'
+                          then 1
+                  when substr(std.transfer_term, -1) = '8'
+                      and (std.term - std.transfer_term) - (floor((std.term - std.transfer_term)/100)*100) = '97'
+                          then 2 
+                  when substr(std.transfer_term, -1) = '2'
+                      and (std.term - std.transfer_term) - (floor((std.term - std.transfer_term)/100)*100) = '3'
+                          then 1
+                  when substr(std.transfer_term, -1) = '2'
+                      and (std.term - std.transfer_term) - (floor((std.term - std.transfer_term)/100)*100) = '6'
+                          then 2 
+                  when substr(std.transfer_term, -1) = '5'
+                      and (std.term - std.transfer_term) - (floor((std.term - std.transfer_term)/100)*100) = '3'
+                          then 1
+                  when substr(std.transfer_term, -1) = '5'
+                      and (std.term - std.transfer_term) - (floor((std.term - std.transfer_term)/100)*100) = '97'
+                          then 2
+                  else 0        
+              end) as semester_no, 
+              decode(std.gender, 'F', 1, 0) as gender,
+              nvl(decode(std.ethnicity, 'Hispanic', 1), 0) as hispanic, 
+              case
+                  when std.ethnicity != 'Hispanic' and std.race = 'White' then 1
+                  else 0
+              end as white,
+              case 
+                  when std.ethnicity != 'Hispanic' and std.race = 'Black or African American' then 1
+                  else 0 
+              end as black_aa,
+              case 
+                  when std.ethnicity != 'Hispanic' and std.race not in ('White', 'Black or African American') then 1
+                  else 0 
+              end as other_minority,
+              nvl(decode(std.citizen, 'Born U.S. Citizen', 1), 0) as us_citizen,
+              nvl(decode(std.citizen, 'Alien, Resident', 1), 0) as res_alien,
+              nvl(decode(std.citizen, 'Alien, Non-resident', 1), 0) as nonres_alien,
+              case
+                  when substr(std.term,1,4) - std.hs_degree_year is null then 0
+                  when substr(std.term,1,4) - std.hs_degree_year = '0' then 1
+                  else 0
+              end as hs_wait_no,
+              case
+                  when substr(std.term,1,4) - std.hs_degree_year is null then 0
+                  when substr(std.term,1,4) - std.hs_degree_year between '1' and '4' then 1
+                  else 0
+              end as hs_wait_one_four,
+              case
+                  when substr(std.term,1,4) - std.hs_degree_year is null then 0
+                  when substr(std.term,1,4) - std.hs_degree_year >= '5' then 1
+                  else 0
+              end as hs_wait_five_more, 
+              case
+                  when std.hs_degree_year is null then 1
+                  else 0
+              end as hs_wait_unknown,   
+              case
+                  when std.hs_degree_type in ('Dual (CP/TP)', 'College Preparatory') then 1
+                  else 0
+              end as cp_hs_degree, 
+              case
+                  when std.hs_degree_type in ('General Equivalency', 'Technology Career Prep') then 1
+                  else 0
+              end as tech_hs_degree,
+              case
+                  when std.hs_degree_type = 'General Education' then 1
+                  else 0
+              end as ged_hs_degree, 
+              case
+                  when std.hs_degree_type is null then 1
+                  else 0
+              end as unknown_hs_degree,     
+              case
+                  when std.hs_gpa <= 4.00 then std.hs_gpa
+                  when std.hs_gpa = '8.88' then 7
+                  when std.hs_gpa = '9.99' then 8
+                  when std.hs_gpa is null then 9
+                  else 0
+              end as hs_gpa,    
+              decode(std.first_generation, 'Y', 1, 0) as first_gen,
+              case
+                  when std.pell_received +
+                       std.hope_received +
+                       std.other_fed_loans +
+                       std.other_fed_grants +
+                       std.other_loans +
+                       std.other_grants_schlr_private > 0 then 1
+                  else 0
+              end as any_aid,
+              decode(std.pell_received, 0, 0, 1) as pell,
+              decode(std.hope_received, 0, 0, 1)as hope,
+              decode(std.other_fed_loans, 0, 0, 1)as fed_loans,
+              decode(std.other_fed_grants, 0, 0, 1) as fed_grants,
+              decode(std.other_loans, 0, 0, 1) as other_loans,
+              decode(std.other_grants_schlr_private, 0, 0, 1) as other_aid,
+              decode(std.housing, 'Y', 1, 0) as housing,
+              decode(std.athlete, 'Y', 1, 0) as athlete,
+              case 
+                  when py.academic_standing is null then 0
+                  when lower(py.academic_standing) like '%suspension%' then 1
+                  else 0
+              end as suspended_py_acay_stand, 
+              case 
+                  when py.academic_standing is null then 0
+                  when lower(py.academic_standing) like '%probation%' then 1
+                  else 0
+              end as probation_py_acay_stand,    
+              case
+                  when py.academic_standing is null then 0
+                  when lower(py.academic_standing) like '%good%' then 1
+                  else 0
+              end as good_py_acay_stand,
+              case 
+                  when py.academic_standing is null then 0
+                  when lower(py.academic_standing) like '%dean%' then 1
+                  else 0 
+              end as dean_py_acay_stand,
+              case
+                  when py.college_code is null then 0
+                  when std.college_code = py.college_code then 0
+                  else 1
+              end as pm_college,
+              case
+                  when py.major_code is null then 0
+                  when std.major_code = py.major_code then 0
+                  else 1
+              end as pm_major,
+              case 
+                  when (lower(std.major_code) = 'sss' 
+                        or lower(std.major_code_2) = 'sss') then 1
+                  else 0
+              end as learn_sup_major,    
+              case 
+                  when (lower(std.major_code) = 'las' 
+                        or lower(std.major_code_2) = 'las') then 1
+                  else 0
+              end as undecided_major,   
+              case 
+                  when (lower(std.major_code) in ('fin','eco', 'ba', 'acc','mgt','hcad','mkt','ib')
+                        or lower(std.major_code_2) in ('fin','eco', 'ba', 'acc','mgt','hcad','mkt','ib')) then 1
+                  else 0
+              end as bus_admin_major,
+              case
+                  when (lower(std.major_code) in ('ast','mat','phy','egs','bio','maa','chm','egr','evs','evg','mco','cis','cs') 
+                        or lower(std.major_code_2) in ('ast','mat','phy','egs','bio','maa','chm','egr','evs','evg','mco','cis','cs')) then 1
+                  else 0      
+              end as stem_major,
+              case 
+                  when (lower(std.major_code) in ('mas','pep','nur','sma','pat','pnur','vtd','vth','dhg','at','ep') 
+                        or lower(std.major_code_2) in ('mas','pep','nur','sma','pat','pnur','vtd','vth','dhg','at','ep')) then 1
+                  else 0      
+              end as health_sci_major,
+              case 
+                  when (lower(std.major_code) in ('mus','mup','danc','art','id','mue','are','tha','spc', 'mas') 
+                        or lower(std.major_code_2) in ('mus','mup','danc','art','id','mue','are','tha','spc', 'mas'))then 1
+                  else 0
+              end as art_major,    
+              case 
+                  when (lower(std.major_code) in ('spd','be','comd','vtt','oat','mge','spe','comx','edix','edi','ece','sed','wed','tie','pe','ads','psy') 
+                        or lower(std.major_code_2) in ('spd','be','comd','vtt','oat','mge','spe','comx','edix','edi','ece','sed','wed','tie','pe','ads','psy')) then 1
+                  else 0
+              end as ed_major,    
+              case
+                  when lower(std.major_code)  in ('sss', 'las', '%ba%', 'ast','mat','phy','egs','bio','maa','chm','egr','evs','evg','mco','cis','cs', 
+                                             'mas','pep','nur','sma','pat','pnur','vtd','vth','dhg','at','ep', 'fin','eco','acc','mgt','hcad',
+                                             'mkt','ib', 'mus','mup','danc','art','id','mue','are','tha','spc', 'spd','be','comd','vtt','oat',
+                                             'mge','spe','comx','edix','edi','ece','sed','wed','tie','pe','ads','psy') then 0
+                  else 1
+              end as other_major,    
+              nvl(decode(std.major_degree_code, 'BGS', 1), 0) as bgs_degree,
+              nvl(decode(std.major_degree_code, 'BBA', 1), 0) as bba_degree, 
+              nvl(decode(std.major_degree_code, 'BM', 1), 0) as bm_degree, 
+              nvl(decode(std.major_degree_code, 'BFA', 1), 0) as bfa_degree, 
+              nvl(decode(std.major_degree_code, 'BSN', 1), 0) as bsn_degree, 
+              nvl(decode(std.major_degree_code, 'BA', 1), 0) as ba_degree, 
+              nvl(decode(std.major_degree_code, '000000', 1), 0) as undecided_degree, 
+              case
+                  when std.major_degree_code like '%BS%' then 1
+                  else 0
+              end as bs_degree,    
+              case
+                  when std.major_degree_code in ('BGS', 'BBA', 'BM', 'BFA', 'BSN', 'BA', '000000') then 0
+                  when std.major_degree_code like '%BS%' then 0
+                  else 1
+              end as other_degree,    
+              decode(std.full_time, 'Y', 1, 0) as ft_stu,
+              nvl(decode(std.student_class_code, 1, 1), 0) as freshman, 
+              nvl(decode(std.student_class_code, 2, 1), 0) as sophomore, 
+              nvl(decode(std.student_class_code, 3, 1), 0) as junior, 
+              nvl(decode(std.student_class_code, 4, 1), 0) as senior,
+              std.attempted_hrs as hrs_enrolled,
+              case
+                  when py.attempted_hrs is null then 0
+                  when py.attempted_hrs = '0' then 0
+                  else round(py.earned_hrs/py.attempted_hrs, 3)
+              end as py_hrs_earned_rate,
+              nvl(py.institutional_term_gpa, 0) as py_term_gpa,
+              nvl(py.vsu_gpa, 0) as py_vsu_gpa,
+              nvl(py.full_cumulative_gpa, 0) as py_full_gpa,
+              decode(std.delv_fullatdistance + std.delv_partatdistance, 0, 0, 1) as distance_component,
+              decode(std.delv_notonline, 0, 0, 1) as not_online,
+              decode(std.delv_hybrid + std.delv_vista, 0, 0, 1) as online_component,
+              nvl(decode(std.campus_ecore + std.campus_emajor + 
+                  std.campus_goml + std.campus_online + 
+                  std.campus_webmba, 0, 0), 1) as online_campus,
+              nvl(decode(std.campus_main, 0, 0), 1) as main_campus,
+              nvl(decode(std.campus_kingsbay + std.campus_military + 
+                  std.campus_offsite, 0, 0), 1) as off_campus,
+              case
+                  when std.overall_quality_points - std.vsu_quality_points = 0 then 0
+                  else round((std.overall_quality_points - std.vsu_quality_points) / 
+                    (std.overall_gpa_hours - std.vsu_gpa_hours), 2) 
+              end as xfer_gpa,
+              nvl(round(py.overall_hours_earned/120, 3), 0) as py_rate_120hrs,
+              case
+                  when substr(std.transfer_term, 1, 4) - to_char(std.birthdate, 'YYYY') <= 24 then 1
+                  else 0
+              end as traditional_student,
+              case
+                  when ny.student_id is null then 0
+                  else 1
+              end as enrolled_next_term,
+              nvl(  CASE
+                        WHEN    fg.pidm IS NOT NULL
+                        THEN    1
+                    END, 0) as earned_degree,  
+              case
+                    when
+                        (case
+                            when ny.student_id is null then 0
+                            else 1
+                          end + 
+                          nvl(  CASE
+                                    WHEN    fg.pidm IS NOT NULL
+                                    THEN    1
+                                END, 0)) = 0 then 0
+                    else 1
+              end as next_term_or_degree,
+              nvl(edr.edr, 0) as edr, 
+              nvl(ps.w, 0) as numb_ws,
+              nvl(ps.wf, 0) as numb_wfs, 
+              nvl(ps.wm, 0) as numb_wms
+from          odi.student_term_details std
+  left outer
+    join      sra_sirs.county edr
+      on      (std.origin_county = edr.name)
+  left outer
+    join      odi.student_term_details py
+      on      (std.student_id = py.student_id
+                and py.student_level_code = 'US'
+                and py.term = (case
+                                    when substr(std.term, -1) = '8' then std.term - 3
+                                    when substr(std.term, -1) = '5' then std.term - 3
+                                    when substr(std.term, -1) = '2' then std.term - 94
+                                end))
+  left outer
+    join      odi.student_term_details ny
+      on      (std.student_id = ny.student_id
+                and ny.student_level_code = 'US'
+                and ny.term = (case
+                                    when substr(std.term, -1) = '8' then std.term + 94
+                                    when substr(std.term, -1) = '5' then std.term + 3
+                                    when substr(std.term, -1) = '2' then std.term + 3
+                                end))
+    left outer
+    join    (   SELECT  pidm,
+                        MAX(term_code) max_grad_term
+                FROM    banner_cube.fact_graduation
+                WHERE   award_status_ind = 'A'
+                GROUP BY pidm
+            ) fg
+        ON  fg.pidm = std.pidm
+                AND max_grad_term >= std.transfer_term
+   /* left outer  
+    join    (   select    distinct pt.term, 
+                          pt.student_id, 
+                          case
+                               when pt.course_grade like '%WM%' or pt.course_grade like '%WF%' then null
+                               when pt.course_grade like '%W%' then pt.crn
+                               else null
+                          end as w, 
+                          case
+                               when pt.course_grade like '%WM%' then pt.crn
+                               else null
+                          end as wm,
+                          case
+                               when pt.course_grade like '%WF%' then pt.crn
+                               else null
+                          end as wf
+             from         odi.student_course_term pt) ps
+        on      (ps.student_id = std.student_id
+                        and ps.term < std.term)  */  
+    LEFT OUTER
+    JOIN    (   SELECT      std_1.term,
+                            std_1.pidm,
+                            COUNT(  case
+                                       when sct_1.course_grade like '%WM%' or sct_1.course_grade like '%WF%' then null
+                                       when sct_1.course_grade like '%W%' then sct_1.crn
+                                       else null
+                                    end) as w,
+                            COUNT(  case
+                                           when sct_1.course_grade like '%WM%' then sct_1.crn
+                                           else null
+                                    end) as wm,
+                            COUNT(  case
+                                           when sct_1.course_grade like '%WF%' then sct_1.crn
+                                           else null
+                                    end) as wf
+                FROM        student_term_details std_1
+                    JOIN    student_course_term sct_1
+                        ON  sct_1.pidm = std_1.pidm
+                        AND sct_1.term < std_1.term
+                GROUP BY    std_1.term,
+                            std_1.pidm
+            ) ps
+        ON  ps.term = std.term
+        AND ps.pidm = std.pidm
+
+where         std.student_level_code = 'US'
+              and std.transfer_term >= '200508'
+                  and std.ftft_term is null
+                  and std.term >= std.transfer_term
+
+)
+
+group by    link, 
+            term, 
+            xfer_cohort, 
+            semester_no, 
+            gender, 
+            hispanic, 
+            white, 
+            black_aa, 
+            other_minority,
+            us_citizen, 
+            res_alien, 
+            nonres_alien, 
+            hs_wait_no, 
+            hs_wait_one_four, 
+            hs_wait_five_more, 
+            hs_wait_unknown, 
+            cp_hs_degree, 
+            tech_hs_degree, 
+            ged_hs_degree, 
+            unknown_hs_degree, 
+            hs_gpa, 
+            first_gen, 
+            any_aid, 
+            pell, 
+            hope, 
+            fed_loans, 
+            fed_grants, 
+            other_loans, 
+            other_aid, 
+            housing, 
+            athlete, 
+            suspended_py_acay_stand, 
+            probation_py_acay_stand, 
+            good_py_acay_stand, 
+            dean_py_acay_stand, 
+            pm_college, 
+            pm_major, 
+            learn_sup_major, 
+            undecided_major, 
+            bus_admin_major, 
+            stem_major, 
+            health_sci_major, 
+            art_major, 
+            ed_major, 
+            other_major, 
+            bgs_degree, 
+            bba_degree, 
+            bm_degree, 
+            bfa_degree, 
+            bsn_degree, 
+            ba_degree, 
+            undecided_degree,
+            bs_degree,
+            other_degree, 
+            ft_stu, 
+            freshman, 
+            sophomore, 
+            junior, 
+            senior, 
+            hrs_enrolled, 
+            py_hrs_earned_rate, 
+            py_term_gpa, 
+            py_vsu_gpa, 
+            py_full_gpa, 
+            distance_component, 
+            not_online, 
+            online_component, 
+            online_campus, 
+            main_campus, 
+            off_campus, 
+            xfer_gpa, 
+            py_rate_120hrs, 
+            traditional_student, 
+            enrolled_next_term, 
+            earned_degree, 
+            next_term_or_degree, 
+            edr
