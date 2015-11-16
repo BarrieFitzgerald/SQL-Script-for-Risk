@@ -1,0 +1,30 @@
+/*SQL QUERY FOR NEW FRESHMAN ADMISSION STANDARDS*/
+
+select        b.term||b.student_id as cohort_link, 
+              greatest(nvl(b.sat_verbal+b.sat_math, 0), 
+                  nvl(xwalk_c.satt_composite, 0)) as test_total,
+              greatest(nvl(b.sat_verbal, 0), 
+                  nvl(xwalk_r.satt_component, 0)) as test_reading,
+              greatest(nvl(b.sat_math, 0),
+                  nvl(xwalk_m.satt_component, 0 )) as test_math, 
+              greatest(nvl(b.sat_verbal, 0),
+                  nvl(xwalk_e.satt_component, 0 )) as test_english
+from          odi.student_term_details b
+  left outer
+  join        act_xwalk_sat xwalk_c
+    on        xwalk_c.actc = b.act_composite
+  left outer
+  join        act_xwalk_sat xwalk_m
+    on        xwalk_m.actc = b.act_math
+  left outer
+  join        act_xwalk_sat xwalk_r
+    on        xwalk_r.actc = b.act_reading
+  left outer
+  join        act_xwalk_sat xwalk_e
+    on        xwalk_e.actc = b.act_english 
+where         b.term =  (select      min(c.term)
+                         from        odi.student_term_details c
+                         where       c.student_type_code = 'F'
+                                      and c.term >= '200508'
+                                      and c.student_id = b.student_id)
+              and b.term >= '200508'
