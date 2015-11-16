@@ -401,7 +401,6 @@ from          odi.student_term_details std
 where         std.student_level_code = 'US'
               and std.term >= '200508'
               and base.term >= '200508'
-              --and std.lname = 'Hough' and std.fname = 'Sarah'
 
 order by std.term
                  
