@@ -1,5 +1,6 @@
 /*SQL QUERY TO CLEAN UP THE NEW FRESHMAN GRAD AND PERSIST DATA
 WILL NEED TO BE JOINED TOGETHER WITH THE ADMISSIONS DATA*/
+
 select      link, 
             cohort_link,
             term, 
