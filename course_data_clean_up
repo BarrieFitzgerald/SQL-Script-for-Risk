@@ -1,0 +1,534 @@
+/*SQL QUERY TO CLEAN UP THE COURSE DATA FOR THE COURSE PROBABILITIES
+ONCE THE QUERY IS LOADED IT WILL NEED TO BE JOINED WITH THE STUDENT 
+DATA FROM THE PERSIST/GRAD FILES*/
+
+select          link,
+                key,
+                course_level,
+                lecture_course,
+                seminar_course,
+                lab_course,
+                direct_study_course,
+                practice_teach_course,
+                interm_pract_course,
+                thesis_course,
+                dissert_course,
+                main_campus,
+                off_campus,
+                vsu_online_campus,
+                ecore_campus,
+                wmba_campus,
+                emajor_campus,
+                study_abroad_campus,
+                euro_tsp_campus,
+                goml_campus,
+                final_pass,
+                midterm_pass,
+                super_section_course,
+                large_section_course,
+                regular_course,
+                any_area_courses,
+                area_a,
+                area_b,
+                area_c,
+                area_d,
+                area_e,
+                early_morning_course,
+                morning_course,
+                lunch_course,
+                afternoon_course,
+                evening_course,
+                sunday_course,
+                monday_course,
+                tuesday_course,
+                wednesday_course,
+                thursday_course,
+                friday_course,
+                saturday_course,
+                day_unknown_course,
+                days_before_start_date,
+                flc_term,
+                bridge_term,
+                ignite_term,
+                emajor_full_term,
+                emajor_first_half_term,
+                emajor_second_half_term,
+                maymester_term,
+                summer_ii_term,
+                summer_iii_term,
+                summer_iv_term,
+                kb_summer_term,
+                ecore_term,
+                ecore_8weeks_term,
+                ecore_short_1_term,
+                ecore_short_2_term,
+                goml_full_term,
+                goml_short_1_term,
+                goml_short_2_term,
+                kingsbay_full_term,
+                kingsbay_first_term,
+                kingsbay_second_term,
+                euro_transatl_term,
+                wmba_term,
+                full_term,
+                first_half_term,
+                second_half_term,
+                weekend_term,
+                other_term,
+                social_science_courses,
+                humanities_courses,
+                stem_courses,
+                health_courses,
+                art_courses,
+                foreign_lang_courses,
+                bus_courses,
+                ed_courses,
+                coop_courses,
+                floor(avg(prev_subject_rate)) as prev_subject_rate,
+                floor(avg(prev_subject_count)) as prev_subject_count,
+                floor(avg(prev_subject_ws)) as prev_subject_ws
+
+from            (
+
+select          course.term||course.student_id as link,
+                course.term||course.student_id||course.crn as key,
+                substr(course.course_number, 1, 1) as course_level, 
+                nvl(decode(course.course_type_code, 'B', 1, 'A', 1), 0) as lecture_course, 
+                nvl(decode(course.course_type_code, 'D', 1), 0) as seminar_course, 
+                nvl(decode(course.course_type_code, 'B', 1, 'E', 1), 0) as lab_course, 
+                nvl(decode(course.course_type_code, 'H', 1), 0) as direct_study_course, 
+                nvl(decode(course.course_type_code, 'I', 1), 0) as practice_teach_course, 
+                nvl(decode(course.course_type_code, 'N', 1), 0) as interm_pract_course, 
+                nvl(decode(course.course_type_code, 'O', 1), 0) as thesis_course, 
+                nvl(decode(course.course_type_code, 'P', 1), 0) as dissert_course,
+                case
+                    when course.course_campus_code = 'A' then 1
+                    else 0
+                end as main_campus,
+                case
+                    when course.course_campus_code in ('3', 'C', 'Z', 'DHY') then 1
+                    else 0
+                end as off_campus, 
+                case
+                    when course.course_campus_code in ('4', '5', '8', '9') then 1
+                    else 0
+                end as vsu_online_campus,
+                case
+                    when course.course_campus_code = '6' then 1
+                    else 0
+                end as ecore_campus, 
+                case
+                   when course.course_campus_code = '7' then 1
+                    else 0
+                end as wmba_campus,
+                case
+                    when course.course_campus_code = 'EM' then 1
+                    else 0
+                end as emajor_campus,
+                case
+                    when course.course_campus_code = 'F' then 1
+                    else 0
+                end as study_abroad_campus,
+                case
+                    when course.course_campus_code in ('EU', 'TSP') then 1
+                    else 0
+                end as euro_tsp_campus,
+                case
+                    when course.course_campus_code = 'GML' then 1
+                    else 0
+                end as goml_campus,
+                case
+                    when substr(course.course_grade, 1, 1) in ('A', 'B', 'C', 'S') then 1
+                    else 0
+                end as final_pass,    
+                case
+                    when substr(course.course_grade_mid, 1, 1) in ('A', 'B', 'C', 'S') then 1
+                    else 0
+                end as midterm_pass,
+                nvl(decode(course.section_size_code, 'SSEC', 1), 0) as super_section_course, 
+                nvl(decode(course.section_size_code, 'LSEC', 1), 0) as large_section_course, 
+                case
+                    when course.section_size_code in ('SSEC', 'LSEC') then 0
+                    else 1
+                end as regular_course,    
+                case
+                    when course.course_attributes like '%Area%' then 1
+                    else 0
+                end as any_area_courses, 
+                case
+                    when course.course_attributes like '%Area A%' then 1
+                    else 0
+                end as area_a, 
+                case
+                    when course.course_attributes like '%Area B%' then 1
+                    else 0
+                end as area_b, 
+                case
+                    when course.course_attributes like '%Area C%' then 1
+                    else 0
+                end as area_c, 
+                case
+                    when course.course_attributes like '%Area D%' then 1
+                    else 0
+                end as area_d, 
+                case
+                    when course.course_attributes like '%Area E%' then 1
+                    else 0
+                end as area_e, 
+                case
+                    when meet.ssrmeet_begin_time is not null and cast(substr(meet.ssrmeet_begin_time, 1, 2) as int) < '8' then 1
+                    else 0
+                end as early_morning_course, 
+                case
+                    when meet.ssrmeet_begin_time is not null and cast(substr(meet.ssrmeet_begin_time, 1, 2) as int) between '8' and '10' then 1
+                    else 0
+                end as morning_course, 
+                case
+                    when meet.ssrmeet_begin_time is not null and cast(substr(meet.ssrmeet_begin_time, 1, 2) as int) between '11' and '13' then 1
+                    else 0
+                end as lunch_course, 
+                case
+                    when meet.ssrmeet_begin_time is not null and cast(substr(meet.ssrmeet_begin_time, 1, 2) as int) between '14' and '16' then 1
+                    else 0
+                end as afternoon_course, 
+                case
+                    when meet.ssrmeet_begin_time is not null and cast(substr(meet.ssrmeet_begin_time, 1, 2) as int) > '16' then 1
+                    else 0
+                end as evening_course,
+                nvl(decode(meet.ssrmeet_sun_day, 'U', 1), 0) as sunday_course, 
+                nvl(decode(meet.ssrmeet_mon_day, 'M', 1), 0) as monday_course, 
+                nvl(decode(meet.ssrmeet_tue_day, 'T', 1), 0) as tuesday_course, 
+                nvl(decode(meet.ssrmeet_wed_day, 'W', 1), 0) as wednesday_course, 
+                nvl(decode(meet.ssrmeet_thu_day, 'R', 1), 0) as thursday_course, 
+                nvl(decode(meet.ssrmeet_fri_day, 'F', 1), 0) as friday_course, 
+                nvl(decode(meet.ssrmeet_sat_day, 'S', 1), 0) as saturday_course,
+                case
+                    when meet.ssrmeet_sun_day is null 
+                          and meet.ssrmeet_mon_day is null
+                          and meet.ssrmeet_tue_day is null
+                          and meet.ssrmeet_wed_day is null
+                          and meet.ssrmeet_thu_day is null
+                          and meet.ssrmeet_fri_day is null
+                          and meet.ssrmeet_sat_day is null then 1
+                    else 0
+                end as day_unknown_course, 
+                1+floor(meet.ssrmeet_start_date - course.registration_date) as days_before_start_date, 
+                case
+                    when section.ssbsect_ptrm_code in ('FLC', 'FY') then 1
+                    else 0
+                end as flc_term, 
+                case
+                    when section.ssbsect_ptrm_code = 'BRG' then 1
+                    else 0
+                end as bridge_term,
+                case
+                    when section.ssbsect_ptrm_code = 'IGN' then 1
+                    else 0
+                end as ignite_term,
+                case
+                    when section.ssbsect_ptrm_code = 'E01' then 1
+                    else 0
+                end as emajor_full_term,
+                case
+                    when section.ssbsect_ptrm_code = 'E02' then 1
+                    else 0
+                end as emajor_first_half_term,
+                case
+                    when section.ssbsect_ptrm_code = 'E03' then 1
+                    else 0
+                end as emajor_second_half_term,
+                case
+                    when section.ssbsect_ptrm_code = '5' then 1
+                    else 0
+                end as maymester_term,
+                case
+                    when section.ssbsect_ptrm_code = '6' then 1
+                    else 0
+                end as summer_ii_term,
+                case
+                    when section.ssbsect_ptrm_code = '7' then 1
+                    else 0
+                end as summer_iii_term,
+                case
+                    when section.ssbsect_ptrm_code = '8' then 1
+                    else 0
+                end as summer_iv_term,
+                case
+                    when section.ssbsect_ptrm_code = 'X' then 1
+                    else 0
+                end as kb_summer_term,
+                case
+                    when section.ssbsect_ptrm_code in ('G', 'GG') then 1
+                    else 0
+                end as ecore_term,    
+                case
+                    when section.ssbsect_ptrm_code = 'G04' then 1
+                    else 0
+                end as ecore_8weeks_term,
+                case
+                    when section.ssbsect_ptrm_code = 'G2' then 1
+                    else 0
+                end as ecore_short_1_term,
+                case
+                    when section.ssbsect_ptrm_code = 'G3' then 1
+                    else 0
+                end as ecore_short_2_term,
+                case
+                    when section.ssbsect_ptrm_code = 'G01' then 1
+                    else 0
+                end as goml_full_term,
+                case
+                    when section.ssbsect_ptrm_code = 'G02' then 1
+                    else 0
+                end as goml_short_1_term,
+                case
+                    when section.ssbsect_ptrm_code = 'G03' then 1
+                    else 0
+                end as goml_short_2_term,
+                case
+                    when section.ssbsect_ptrm_code = 'D' then 1
+                    else 0
+                end as kingsbay_full_term,
+                case
+                    when section.ssbsect_ptrm_code = 'A' then 1
+                    else 0
+                end as kingsbay_first_term,
+                case
+                    when section.ssbsect_ptrm_code = 'B' then 1
+                    else 0
+                end as kingsbay_second_term,
+                case
+                    when section.ssbsect_ptrm_code in ('TSP', 'U01') then 1
+                    else 0
+                end as euro_transatl_term, 
+                case
+                    when section.ssbsect_ptrm_code = 'W' then 1
+                    else 0
+                end as wmba_term, 
+                case
+                    when section.ssbsect_ptrm_code in ('1', '11', 'C', 'DE', 'MA', 'N01', 'R', 'S') then 1
+                    else 0
+                end as full_term,
+                case
+                    when section.ssbsect_ptrm_code = '2' then 1
+                    else 0
+                end as first_half_term,
+                case
+                    when section.ssbsect_ptrm_code = '3' then 1
+                    else 0
+                end as second_half_term,
+                case
+                    when section.ssbsect_ptrm_code in ('H', 'I', 'J', 'K', 'O', 'P', 'Q') then 1
+                    else 0
+                end as weekend_term,
+                case
+                    when section.ssbsect_ptrm_code in ('AA', 'BB', 'C1', 'C2', 'C3', 'CC', 'DD', 'E', 
+                                                       'EE', 'FF', 'HH', 'II', 'JJ', 'KK', 'L', 'M', 
+                                                       'N', 'T', 'U', 'Y', 'Z') then 1
+                    else 0
+                end as other_term, 
+                case
+                    when course.subject_code in ('PSYC', 'SOCI', 'CRJU', 'POLS', 'PADM', 'ANTH') then 1
+                    else 0
+                end as social_science_courses, 
+                case
+                    when coursegroup.subject_group = 1
+                          and course.subject_code not in ('MFTH', 'PSYC', 'SOCI', 'CRJU', 'POLS', 'PADM', 'ANTH') then 1
+                    else 0
+                end as humanities_courses, 
+                case
+                    when coursegroup.subject_group = 2 then 1
+                    else 0
+                end as stem_courses, 
+                case
+                    when coursegroup.subject_group = 3
+                          or course.subject_code in ('MFTH', 'CSD') then 1
+                    else 0
+                end as health_courses, 
+                case
+                    when coursegroup.subject_group = 4 then 1
+                    else 0
+                end as art_courses, 
+                case
+                    when coursegroup.subject_group = 5 then 1
+                    else 0
+                end as foreign_lang_courses, 
+                case
+                    when coursegroup.subject_group = 6 then 1
+                    else 0
+                end as bus_courses, 
+                case
+                    when coursegroup.subject_group = 7
+                          and course.subject_code not in ('PSYC', 'CSD', 'COOP', 'COPS') then 1
+                    else 0
+                end as ed_courses, 
+                case
+                    when course.subject_code in ('COOP', 'COPS') then 1
+                    else 0
+                end as coop_courses,
+                nvl(previous_subject.previous_subject_rate, 0) as prev_subject_rate, 
+                nvl(previous_subject.numb_of_course_count, 0) as prev_subject_count,
+                nvl(previous_subject.numb_of_ws, 0) as prev_subject_ws
+                
+from            odi.student_course_term course
+
+  left outer
+    join        ssrmeet@prod meet
+      on        meet.ssrmeet_crn = course.crn
+                  and meet.ssrmeet_term_code = course.term
+
+  left outer
+    join        ssbsect@prod section
+      on        section.ssbsect_term_code = course.term
+                  and section.ssbsect_crn = course.crn
+
+  left outer
+    join        course_group coursegroup
+      on        coursegroup.subject_code = course.subject_code
+
+  left outer
+    join        ( select      py.student_id,
+                              py.term, 
+                              py.subject_code, 
+                              sum(decode(substr(pt.course_grade, 1, 1), 'A', 1, 'B', 1, 'C', 1, 'S', 1, 
+                                    'D', 0, 'F', 0, 'W', 0, 'U', 0, 
+                                    null)) / count(*) as previous_subject_rate,
+                              count(pt.crn) as numb_of_course_count, 
+                              sum(nvl(decode(substr(pt.course_grade, 1, 1), 'W', 1), 0)) numb_of_ws
+                  
+                  from        odi.student_course_term py
+                  
+                    join      odi.student_course_term pt
+                      on      pt.student_id = py.student_id
+                                and pt.term < py.term
+                                and pt.subject_code = py.subject_code
+                  
+                  where       py.term >= '200508'
+                              and py.student_level_code = 'US'
+                  
+                  group by    py.student_id, 
+                              py.term, 
+                              py.subject_code, 
+                              py.course_number ) previous_subject
+      on        previous_subject.student_id = course.student_id
+                  and previous_subject.term = course.term
+                  and previous_subject.subject_code = course.subject_code
+
+ left outer
+    join        ( select        pa.student_id, 
+                                pa.subject_code, 
+                                pa.course_number, 
+                                pa.term, 
+                                sum(case
+                                    when pb.subject_code = pa.subject_code
+                                          and pb.course_number = pa.course_number then 1
+                                    else 0
+                                end) as previous_attempt    
+                  
+                  from          odi.student_course_term pa
+                    left outer
+                      join      odi.student_course_term pb
+                        on      pb.student_id = pa.student_id
+                                  and pb.term < pa.term
+                  
+                  where         pa.student_level_code = 'US'
+                  group by      pa.student_id, 
+                                pa.subject_code, 
+                                pa.course_number, 
+                                pa.term) previous_course
+      on       previous_course.student_id = course.student_id
+                  and previous_course.subject_code = course.subject_code
+                  and previous_course.course_number = course.course_number
+                  and previous_course.term = course.term
+       
+
+where           course.term >= '200508' 
+                  and course.student_level_code = 'US'
+                  and substr(course.course_grade, 1, 1) not in ('N', 'V', 'I')
+
+)
+
+  group by        link,
+                  key,
+                  course_level,
+                  lecture_course,
+                  seminar_course,
+                  lab_course,
+                  direct_study_course,
+                  practice_teach_course,
+                  interm_pract_course,
+                  thesis_course,
+                  dissert_course,
+                  main_campus,
+                  off_campus,
+                  vsu_online_campus,
+                  ecore_campus,
+                  wmba_campus,
+                  emajor_campus,
+                  study_abroad_campus,
+                  euro_tsp_campus,
+                  goml_campus,
+                  final_pass,
+                  midterm_pass,
+                  super_section_course,
+                  large_section_course,
+                  regular_course,
+                  any_area_courses,
+                  area_a,
+                  area_b,
+                  area_c,
+                  area_d,
+                  area_e,
+                  early_morning_course,
+                  morning_course,
+                  lunch_course,
+                  afternoon_course,
+                  evening_course,
+                  sunday_course,
+                  monday_course,
+                  tuesday_course,
+                  wednesday_course,
+                  thursday_course,
+                  friday_course,
+                  saturday_course,
+                  day_unknown_course,
+                  days_before_start_date,
+                  flc_term,
+                  bridge_term,
+                  ignite_term,
+                  emajor_full_term,
+                  emajor_first_half_term,
+                  emajor_second_half_term,
+                  maymester_term,
+                  summer_ii_term,
+                  summer_iii_term,
+                  summer_iv_term,
+                  kb_summer_term,
+                  ecore_term,
+                  ecore_8weeks_term,
+                  ecore_short_1_term,
+                  ecore_short_2_term,
+                  goml_full_term,
+                  goml_short_1_term,
+                  goml_short_2_term,
+                  kingsbay_full_term,
+                  kingsbay_first_term,
+                  kingsbay_second_term,
+                  euro_transatl_term,
+                  wmba_term,
+                  full_term,
+                  first_half_term,
+                  second_half_term,
+                  weekend_term,
+                  other_term,
+                  social_science_courses,
+                  humanities_courses,
+                  stem_courses,
+                  health_courses,
+                  art_courses,
+                  foreign_lang_courses,
+                  bus_courses,
+                  ed_courses,
+                  coop_courses
+
+
